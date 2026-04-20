@@ -1,0 +1,25 @@
+[
+    {
+        "name": "咪咕",
+        "url": "https://down.nigx.cn/raw.githubusercontent.com/develop202/migu_video/refs/heads/main/interface.txt",
+        "header": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            "Referer": "",
+            "cookie": ""
+        }
+    },
+    {
+        "name": "风云直播",
+        "url": "http://iptv.4666888.xyz/FYTV.m3u",
+        "header": {
+            "User-Agent": "okhttp/5.1.0"
+        }
+    },
+    {
+        "name": "gather",
+        "url": "https://tv.iill.top/m3u/Gather",
+        "header": {
+            "User-Agent": "okhttp/5.1.0"
+        }
+    }
+]

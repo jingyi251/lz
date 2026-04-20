@@ -1,0 +1,17 @@
+[
+    {
+        "name": "gather",
+        "url": "https://tv.iill.top/m3u/Gather",
+        "header": {
+            "User-Agent": "okhttp/1.9.89"
+        }
+    },
+    {
+        "name": "jack",
+        "url": "https://php.946985.filegear-sg.me/jackTV.m3u",
+        "header": {
+            "User-Agent": "okhttp/5.1.0",
+            "Referer": "https://m.iill.top/"
+        }
+    }
+]
