@@ -9,7 +9,7 @@
             "api": "csp_ProxySpider",
             "ext": {
                 "class": "LegadoSpider",
-                "ext": "http://127.0.0.1:9978/file/lz/sources.json"
+                "ext": "./sources.json"
             },
             "style": {
                 "type": "rect",
@@ -59,7 +59,7 @@
             "ext": {
                 "class": "YoutubeSpider",
                 "ext": {
-                    "youtube_txt": "http://127.0.0.1:9978/file/lz/youtube0418.txt"
+                    "youtube_txt": "./youtube0418.txt"
                 }
             }
         },
@@ -76,7 +76,7 @@
             },
             "ext": {
                 "class": "Music1",
-                "ext": "http://127.0.0.1:9978/file/lz/jdyy.json"
+                "ext": "./jdyy.json"
             },
             "filterable": 1
         },
@@ -118,7 +118,7 @@
             "filterable": 0,
             "ext": {
                 "class": "TxtLiveSpider",
-                "ext": "/storage/emulated/0/lz/虎牙全集.txt"
+                "ext": "./虎牙全集.txt"
             }
         },
         {
@@ -159,7 +159,7 @@
             "changeable": 1,
             "ext": {
                 "class": "CJJH",
-                "ext": "http://127.0.0.1:9978/file/lz/cj.json#0"
+                "ext": "./cj.json#0"
             }
         },
         {
@@ -255,7 +255,7 @@
             "changeable": 1,
             "ext": {
                 "class": "FileSpider",
-                "ext": "/storage/emulated/0/lz/wj/其他/"
+                "ext": "./wj/其他/"
             }
         },
         {
@@ -332,7 +332,7 @@
             "name": "油管清单播放",
             "type": 4,
             "api": "http://127.0.0.1:1988/lb?lb=9",
-            "ext": "/storage/emulated/0/lz/json/油管/",
+            "ext": "./json/油管/",
             "style": {
                 "type": "rect",
                 "ratio": 1.33
@@ -344,7 +344,7 @@
             "name": "影视清单播放",
             "type": 4,
             "api": "http://127.0.0.1:1988/lb?lb=9",
-            "ext": "/storage/emulated/0/lz/json/影视/",
+            "ext": "./json/影视/",
             "style": {
                 "type": "rect",
                 "ratio": 1.33
@@ -356,7 +356,7 @@
             "name": "其他清单播放",
             "type": 4,
             "api": "http://127.0.0.1:1988/lb?lb=9",
-            "ext": "/storage/emulated/0/lz/json/其他/",
+            "ext": "./json/其他/",
             "style": {
                 "type": "rect",
                 "ratio": 1.33
@@ -368,7 +368,7 @@
             "name": "油管文件播放",
             "type": 4,
             "api": "http://127.0.0.1:1988/lb?lb=8",
-            "ext": "/storage/emulated/0/lz/wj/油管/",
+            "ext": "./wj/油管/",
             "style": {
                 "type": "rect",
                 "ratio": 1.33
@@ -380,7 +380,7 @@
             "name": "影视文件播放",
             "type": 4,
             "api": "http://127.0.0.1:1988/lb?lb=8",
-            "ext": "/storage/emulated/0/lz/wj/影视/",
+            "ext": "./wj/影视/",
             "style": {
                 "type": "rect",
                 "ratio": 1.33
@@ -392,7 +392,7 @@
             "name": "直播文件播放",
             "type": 4,
             "api": "http://127.0.0.1:1988/lb?lb=8",
-            "ext": "/storage/emulated/0/lz/wj/直播/",
+            "ext": "./wj/直播/",
             "style": {
                 "type": "rect",
                 "ratio": 1.33
@@ -404,7 +404,7 @@
             "name": "其他文件播放",
             "type": 4,
             "api": "http://127.0.0.1:1988/lb?lb=8",
-            "ext": "/storage/emulated/0/lz/wj/其他/",
+            "ext": "./wj/其他/",
             "style": {
                 "type": "rect",
                 "ratio": 1.33
