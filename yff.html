@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>本机极速版 (透亮高光 UI 版)</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/artplayer/dist/artplayer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flv.js@1.6.2/dist/flv.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* ================= 高级渐变 & 透亮光影 UI 样式定义 ================= */
+        :root {
+            --primary: #6da4ff; /* 稍微提亮一点的主题蓝 */
+            --primary-glow: rgba(109, 164, 255, 0.6);
+            --text-sub: #b3b3b3;
+            --nav-height: 60px;
+        }
+        
+        [v-cloak] { display: none !important; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        
+        body { 
+            margin: 0; padding: 0; 
+            color: #fff; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            -webkit-font-smoothing: antialiased;
+            height: 100vh; overflow: hidden;
+            display: flex; flex-direction: column;
+            background: transparent; 
+        }
+
+        /* 🌟 升级 1：大幅拉长渐变区域，提亮暖色调，使其覆盖屏幕大半部分 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            /* 160deg 倾斜角，色彩从红棕色过渡到深栗色，再到纯黑，延伸至 65% */
+            background: linear-gradient(160deg, #583131 0%, #3a2020 35%, #1a1212 65%, #0a0a0a 100%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        #app {
+            flex: 1; display: flex; flex-direction: column; overflow: hidden; width: 100%;
+        }
+
+        .list-view { 
+            flex: 1; display: flex; flex-direction: column; width: 100%; overflow: hidden; 
+        }
+
+        /* 🌟 升级 2：降低导航栏自身颜色厚度，加强毛玻璃效果，让渐变色透出来 */
+        .glass-nav {
+            width: 100%; z-index: 1000; flex-shrink: 0;
+            background: rgba(30, 20, 20, 0.35); /* 降低透明度 */
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); /* 加大模糊半径 */
+            padding: 20px 0 0 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08); /* 提亮底边线 */
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            transition: all 0.3s;
+        }
+        
+        .search-container { display: flex; gap: 10px; padding: 0 15px 12px 15px; }
+        
+        /* 🌟 升级 3：提亮搜索框和按钮，加入微光边框 */
+        .source-select { 
+            width: 25%; 
+            background: rgba(255, 255, 255, 0.12); /* 从纯黑半透改为纯白半透，大幅提亮 */
+            border: 1px solid rgba(255, 255, 255, 0.2); 
+            color: #fff; border-radius: 8px; padding: 0 8px; font-size: 13px; outline: none;
+            backdrop-filter: blur(10px);
+        }
+        .search-input-wrapper {
+            flex: 1; display: flex; 
+            background: rgba(255, 255, 255, 0.12); border-radius: 8px; overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2); transition: border-color 0.3s;
+            backdrop-filter: blur(10px);
+        }
+        .search-input-wrapper:focus-within { border-color: var(--primary); background: rgba(255, 255, 255, 0.18); }
+        .search-input { flex: 1; background: transparent; border: none; padding: 8px 12px; color: #fff; font-size: 14px; }
+        .search-input::placeholder { color: rgba(255, 255, 255, 0.5); }
+        .search-btn { background: transparent; color: #fff; border: none; padding: 0 12px; font-size: 14px; cursor: pointer; }
+
+        .nav-scroller { display: flex; overflow-x: auto; gap: 20px; padding: 0 15px 8px 15px; scroll-behavior: smooth; }
+        .nav-scroller::-webkit-scrollbar { display: none; }
+        .nav-item { 
+            white-space: nowrap; font-size: 15px; color: rgba(255,255,255,0.7); /* 提亮未选中文字 */
+            padding-bottom: 4px; border-bottom: 2px solid transparent; 
+            transition: all 0.2s; cursor: pointer; 
+        }
+        .nav-item.active { color: #fff; border-bottom: 2px solid var(--primary); font-weight: bold; font-size: 16px; text-shadow: 0 0 10px var(--primary-glow); }
+
+        .scroll-area {
+            flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch;
+            padding-top: 15px; padding-bottom: 20px;
+        }
+
+        .hero-banner {
+            width: 92%; height: 200px; margin: 0 auto 20px auto; border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5); position: relative; overflow: hidden;
+            cursor: pointer; flex-shrink: 0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .hero-img { width: 100%; height: 100%; object-fit: cover; }
+        .hero-overlay {
+            position: absolute; bottom: 0; left: 0; width: 100%; padding: 40px 15px 15px 15px;
+            background: linear-gradient(to top, rgba(10,10,10,0.9) 0%, rgba(10,10,10,0.4) 50%, transparent 100%);
+        }
+        .hero-title { font-size: 19px; font-weight: 800; text-shadow: 0 2px 6px rgba(0,0,0,0.9); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .section-heading { padding: 0 15px; font-size: 18px; font-weight: bold; margin-bottom: 12px; border-left: 4px solid var(--primary); margin-left: 15px; padding-left: 10px; line-height: 1; flex-shrink: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+
+        .h-scroll-container { display: flex; overflow-x: auto; gap: 12px; padding: 0 15px 5px 15px; margin-bottom: 20px; flex-shrink: 0; }
+        .h-scroll-container::-webkit-scrollbar { display: none; }
+        
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 0 15px; }
+        
+        /* 🌟 升级 4：卡片晶莹剔透感，加入仿光照微渐变和顶部高光边缘 */
+        .vod-card {
+            position: relative; border-radius: 8px; overflow: hidden;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-top: 1px solid rgba(255, 255, 255, 0.2); /* 顶部高光倒角 */
+            padding-bottom: 5px; box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+            display: flex; flex-direction: column; cursor: pointer; transition: transform 0.2s;
+            flex: 0 0 60vw;
+            backdrop-filter: blur(8px);
+        }
+        .vod-card:active { transform: scale(0.96); background: rgba(255, 255, 255, 0.15); }
+        .grid .vod-card { flex: unset; } 
+        
+        .vod-pic { width: 100%; aspect-ratio: 16/9; object-fit: cover; }
+        .vod-score { position: absolute; top: 6px; left: 6px; background: #ff7043; color: #fff; font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: bold; z-index: 2; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        
+        /* 提亮文字下方遮罩，使其不仅清晰，还不显脏 */
+        .vod-info { position: absolute; bottom: 40px; right: 6px; font-size: 11px; color: #eee; background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px; z-index: 2; backdrop-filter: blur(4px); }
+        .vod-name { font-size: 14px; padding: 8px 8px 4px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; font-weight: 500; }
+
+        .status-msg { text-align: center; padding: 20px; color: #bbb; font-size: 14px; font-weight: normal; grid-column: 1/-1; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+
+        /* ================= 详情页纵深 UI ================= */
+        .detail-view { 
+            display: flex; flex-direction: column;
+            height: 100vh; position: absolute; top: 0; left: 0; width: 100%; 
+            z-index: 2000; 
+            background: transparent; 
+            overflow: hidden;
+        }
+        
+        .detail-header { flex-shrink: 0; position: sticky; top: 0; z-index: 100; height: var(--nav-height); background: rgba(30, 20, 20, 0.4); backdrop-filter: blur(20px); display: flex; align-items: center; padding: 0 15px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .back-btn { background: transparent; border: none; color: #fff; font-size: 18px; width: 36px; height: 36px; margin-right: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        
+        .player-wrapper { flex-shrink: 0; width: 100%; aspect-ratio: 16/9; background: #000; position: sticky; top: var(--nav-height); z-index: 90; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        
+        .detail-scroll-area {
+            flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%); 
+        }
+
+        .info-section { padding: 20px 15px; padding-bottom: 40px; }
+        .vod-title { font-size: 22px; font-weight: 800; margin: 0 0 10px 0; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .vod-meta { font-size: 12px; color: #ddd; margin-bottom: 20px; display: inline-block; background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); }
+        
+        .lines-container { display: flex; overflow-x: auto; gap: 12px; padding-bottom: 15px; margin-bottom: 10px; }
+        .lines-container::-webkit-scrollbar { display: none; }
+        .line-btn { white-space: nowrap; padding: 8px 16px; border-radius: 20px; background: rgba(255,255,255,0.1); color: #ddd; font-size: 13px; font-weight: bold; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s; }
+        .line-btn.active { background: rgba(109, 164, 255, 0.2); color: #fff; border-color: var(--primary); box-shadow: 0 0 15px var(--primary-glow); }
+
+        .eps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 25px; }
+        .ep-btn { background: rgba(255,255,255,0.1); color: #eee; text-align: center; padding: 10px 5px; border-radius: 6px; font-size: 13px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px solid rgba(255,255,255,0.05); transition: all 0.2s; }
+        .ep-btn:active { transform: scale(0.95); }
+        .ep-btn.active { background: var(--primary); color: #fff; font-weight: bold; box-shadow: 0 4px 12px var(--primary-glow); border-color: var(--primary); }
+
+        .vod-desc { font-size: 13px; color: #ddd; line-height: 1.6; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; text-align: justify; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(5px); }
+
+        .page-enter-active, .page-leave-active { transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+        .page-enter-from { opacity: 0; transform: translateY(30px); }
+        .page-leave-to { opacity: 0; transform: translateY(-30px); }
+    </style>
+</head>
+<body>
+
+<div id="app" v-cloak>
+    
+    <transition name="page">
+        <div v-show="currentView === 'list'" class="list-view">
+            
+            <div class="glass-nav" id="main-nav">
+                <div class="search-container">
+                    <select class="source-select" v-model="currentSite" @change="onSourceChange">
+                        <option v-if="sites.length === 0" value="">加载源...</option>
+                        <option v-for="site in sites" :key="site.key" :value="site.key">{{ site.name }}</option>
+                    </select>
+                    <div class="search-input-wrapper">
+                        <input type="text" class="search-input" v-model="wd" placeholder="探索海量影视..." @keyup.enter="doSearch">
+                        <button class="search-btn" @click="doSearch"><i class="fas fa-search"></i></button>
+                    </div>
+                </div>
+
+                <div class="nav-scroller" v-if="categories.length > 0">
+                    <div v-for="cat in categories" :key="cat.type_id" 
+                         class="nav-item" :class="{ active: t === cat.type_id }"
+                         @click="changeTab(cat.type_id)">
+                        {{ cat.type_name }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="scroll-area" id="list-scroll-area" @scroll="handleScroll">
+                <div v-if="vodList.length > 0">
+                    
+                    <div class="hero-banner" v-if="heroItem" @click="handleCardClick(heroItem)">
+                        <img class="hero-img" :src="heroItem.vod_pic" onerror="this.src='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'">
+                        <div class="hero-overlay">
+                            <div class="hero-title">{{ heroItem.vod_name }}</div>
+                        </div>
+                    </div>
+
+                    <template v-if="hotItems.length > 0">
+                        <div class="section-heading">正在热播</div>
+                        <div class="h-scroll-container">
+                            <div class="vod-card" v-for="item in hotItems" :key="item.vod_id" @click="handleCardClick(item)">
+                                <div class="vod-score" v-if="item.vod_year || item.vod_remarks">{{ item.vod_year || item.vod_remarks || '8.0' }}</div>
+                                <img class="vod-pic" :src="item.vod_pic" loading="lazy">
+                                <div class="vod-info" v-if="item.vod_remarks">{{ item.vod_remarks }}</div>
+                                <div class="vod-name">{{ item.vod_name }}</div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template v-if="gridItems.length > 0">
+                        <div class="section-heading">为您推荐</div>
+                        <div class="grid">
+                            <div v-for="item in gridItems" :key="item.vod_id" class="vod-card" @click="handleCardClick(item)">
+                                <div class="vod-score" v-if="item.vod_year || item.vod_remarks">{{ item.vod_year || item.vod_remarks || '8.0' }}</div>
+                                <img class="vod-pic" :src="item.vod_pic" loading="lazy">
+                                <div class="vod-info" v-if="item.vod_remarks">{{ item.vod_remarks }}</div>
+                                <div class="vod-name">{{ item.vod_name }}</div>
+                            </div>
+                        </div>
+                    </template>
+                    
+                    <div v-if="isLoading && vodList.length > 0" class="status-msg">
+                        <i class="fas fa-circle-notch fa-spin" style="margin-right: 8px;"></i> 正在努力加载更多...
+                    </div>
+
+                    <div v-if="isFinish" class="status-msg">—— 宇宙的尽头 ——</div>
+                </div>
+                
+                <div v-if="isLoading && vodList.length === 0" class="status-msg" style="margin-top: 100px;">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 10px; display:block;"></i> 正在注入网络数据...
+                </div>
+                <div v-else-if="vodList.length === 0 && !isLoading" class="status-msg" style="margin-top: 100px;">
+                    该分类暂无数据
+                </div>
+            </div>
+            
+        </div>
+    </transition>
+
+    <transition name="page">
+        <div v-if="currentView === 'detail'" class="detail-view">
+            
+            <div class="detail-header">
+                <button class="back-btn" @click="goBack"><i class="fas fa-chevron-left"></i></button>
+                <span style="font-weight: bold; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    {{ detailData.vod_name || '解析中...' }}
+                </span>
+            </div>
+
+            <div v-if="isFloating" style="width: 100%; aspect-ratio: 16/9; background: transparent; flex-shrink: 0;"></div>
+
+            <div class="player-wrapper" :class="{ floating: isFloating }" id="player-box">
+                <div id="artplayer-app" style="width:100%; height:100%;" v-show="!isYoutube"></div>
+                <div id="youtube-app" style="width:100%; height:100%;" v-show="isYoutube"></div>
+            </div>
+
+            <div class="detail-scroll-area">
+                <div class="info-section">
+                    <h1 class="vod-title">{{ detailData.vod_name }}</h1>
+                    <div class="vod-meta">{{ formattedMeta }}</div>
+
+                    <div class="section-heading" style="padding: 0; margin-left: 0; font-size: 16px; margin-bottom: 15px; border-left: none;">信号源</div>
+                    <div class="lines-container">
+                        <div v-for="(line, index) in playData" :key="index" 
+                             class="line-btn" :class="{ active: currentLine === index }"
+                             @click="changeLine(index)">
+                            {{ line.from }}
+                        </div>
+                    </div>
+
+                    <div class="section-heading" style="padding: 0; margin-left: 0; font-size: 16px; margin-bottom: 15px; margin-top: 10px; border-left: none;">剧集列表</div>
+                    <div class="eps-grid" v-if="currentLineEps.length > 0">
+                        <div v-for="(ep, index) in currentLineEps" :key="index"
+                             class="ep-btn" :class="{ active: currentEp === index }"
+                             @click="playVideo(ep.url, index)">
+                            {{ ep.name }}
+                        </div>
+                    </div>
+                    <div v-else class="status-msg" style="padding: 10px;">源信号微弱，无法解析</div>
+
+                    <div class="section-heading" style="padding: 0; margin-left: 0; font-size: 16px; margin-bottom: 15px; margin-top: 10px; border-left: none;">剧情档案</div>
+                    <div class="vod-desc">{{ formattedDesc }}</div>
+                </div>
+            </div>
+        </div>
+    </transition>
+
+</div>
+
+<script>
+const { createApp } = Vue;
+
+const currentProtocol = window.location.protocol;
+const currentHost = window.location.hostname || '127.0.0.1';
+
+const API_HOST = `${currentProtocol}//${currentHost}:8080/`;
+const PROXY_HOST = `${currentProtocol}//${currentHost}:8082/`;
+
+createApp({
+    data() {
+        return {
+            currentView: 'list', 
+            isServerConnected: false,
+            sites: [], currentSite: '', t: '', wd: '', pg: 1,
+            categories: [], vodList: [], isLoading: false, isFinish: false,
+            detailData: {}, playData: [], currentLine: 0, currentEp: 0,
+            art: null, isYoutube: false, isFloating: false
+        }
+    },
+    computed: {
+        heroItem() { return this.vodList.length > 0 ? this.vodList[0] : null; },
+        hotItems() { return this.vodList.length > 1 ? this.vodList.slice(1, 5) : []; },
+        gridItems() { return this.vodList.length > 5 ? this.vodList.slice(5) : []; },
+        currentLineEps() { return this.playData[this.currentLine]?.eps || []; },
+        formattedMeta() {
+            if (!this.detailData) return '';
+            const arr = [this.detailData.vod_year, this.detailData.vod_area, this.detailData.vod_class].filter(Boolean);
+            return arr.length > 0 ? arr.join(' · ') : '暂无影片信息';
+        },
+        formattedDesc() {
+            if (!this.detailData || !this.detailData.vod_content) return '暂无简介';
+            return this.detailData.vod_content.toString().replace(/<[^>]+>/g, ""); 
+        }
+    },
+    mounted() {
+        this.init();
+    },
+    unmounted() {
+        if (this.art) this.art.destroy();
+    },
+    methods: {
+        async api(params) {
+            const finalParams = { site: this.currentSite, ...params };
+            Object.keys(finalParams).forEach(k => { if (!finalParams[k]) delete finalParams[k]; });
+            const qs = new URLSearchParams(finalParams).toString();
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000); 
+                const res = await fetch(`${API_HOST}?${qs}`, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                return await res.json();
+            } catch (e) { 
+                console.error('API请求失败/超时:', e);
+                return { code: 500, msg: '网络错误或超时' }; 
+            }
+        },
+        async init() {
+            fetch(API_HOST).then(() => this.isServerConnected = true).catch(() => this.isServerConnected = false);
+            try {
+                const res = await fetch(`${API_HOST}?sites=1`);
+                const data = await res.json();
+                if (data.code === 200 && data.sites && data.sites.length > 0) {
+                    this.sites = data.sites;
+                    this.currentSite = this.sites[0].key;
+                }
+            } catch (e) { console.error('获取源失败', e); }
+            if(this.currentSite) {
+                await this.loadNav();
+                this.loadList(true);
+            }
+        },
+        async loadNav() {
+            const res = await this.api({});
+            if (res.class && res.class.length > 0) {
+                this.categories = res.class;
+                if (!this.t && !this.wd) { this.t = res.class[0].type_id; }
+            } else { this.categories = []; }
+        },
+        async loadList(reset = false) {
+            if (reset) { 
+                this.pg = 1; this.vodList = []; this.isFinish = false; 
+                const scrollEl = document.getElementById('list-scroll-area');
+                if(scrollEl) scrollEl.scrollTop = 0;
+            }
+            if (this.isLoading || this.isFinish) return;
+            this.isLoading = true;
+            const res = await this.api({ t: this.t, wd: this.wd, pg: this.pg });
+            this.isLoading = false;
+            if (res.code === 500 || !res.list || res.list.length === 0) { this.isFinish = true; return; }
+            this.vodList.push(...res.list);
+        },
+        onSourceChange() {
+            this.t = ''; this.wd = ''; this.categories = [];
+            this.loadNav().then(() => { this.loadList(true); });
+        },
+        changeTab(id) { 
+            this.t = id; this.wd = ''; this.loadList(true); 
+        },
+        doSearch() { 
+            this.t = ''; this.loadList(true); 
+        },
+        handleScroll(e) {
+            const target = e.target;
+            if (this.currentView !== 'list' || this.isLoading || this.isFinish) return;
+            if (target.scrollTop + target.clientHeight >= target.scrollHeight - 200) { 
+                this.pg++; this.loadList(false); 
+            }
+        },
+        handleCardClick(v) {
+            if (v.vod_tag === 'folder') {
+                this.t = v.vod_id; this.wd = ''; this.loadList(true);
+            } else { this.showDetail(v.vod_id); }
+        },
+        async showDetail(id) {
+            this.currentView = 'detail'; this.isFloating = false; 
+            this.detailData = {}; this.playData = []; this.currentLine = 0; this.currentEp = 0;
+            if (this.art) { this.art.destroy(); this.art = null; }
+
+            const res = await this.api({ ids: id });
+            if (!res.list || res.list.length === 0) return;
+            const item = res.list[0];
+            item.vod_name = item.vod_name || item.name || '未知片名';
+            this.detailData = item;
+
+            const froms = (item.vod_play_from || '默认线路').split('$$$');
+            const urls = (item.vod_play_url || '').split('$$$');
+            this.playData = froms.map((f, i) => {
+                let uStr = urls[i] || '';
+                if (uStr.indexOf('$') === -1) { uStr = '正片$' + uStr; }
+                const epsList = [];
+                const parts = uStr.split('#');
+                parts.forEach(line => {
+                    if (!line.trim()) return; 
+                    const p = line.split('$');
+                    epsList.push({ name: p[0], url: p[1] || p[0] });
+                });
+                return { from: f, eps: epsList };
+            });
+
+            if (this.playData[0] && this.playData[0].eps[0]) {
+                this.$nextTick(() => { this.playVideo(this.playData[0].eps[0].url, 0); });
+            }
+        },
+        changeLine(index) {
+            this.currentLine = index;
+            if (this.currentLineEps.length > 0) { this.playVideo(this.currentLineEps[0].url, 0); }
+        },
+        async playVideo(url, index) {
+            this.currentEp = index;
+            
+            const ytRegExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+            const initialMatch = url.match(ytRegExp);
+            if (initialMatch && initialMatch[2].length === 11) {
+                this.initYouTube(initialMatch[2]);
+                return;
+            }
+
+            const qs = new URLSearchParams({ site: this.currentSite, play: url }).toString();
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000);
+                const res = await fetch(`${API_HOST}?${qs}`, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                const data = await res.json();
+                
+                let finalUrl = url; let headers = null;
+                if (data.url) finalUrl = data.url;
+                if (data.header) headers = data.header;
+                
+                this.preparePlayer(finalUrl, headers);
+            } catch(e) {
+                this.preparePlayer(url, null);
+            }
+        },
+        preparePlayer(url, headers) {
+            const ytRegExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+            const ytMatch = url.match(ytRegExp);
+            if (ytMatch && ytMatch[2].length === 11) { 
+                this.initYouTube(ytMatch[2]); 
+                return; 
+            }
+
+            let proxyUrl = `${PROXY_HOST}?do=proxy&url=${encodeURIComponent(url)}`;
+            if (headers) {
+                const jsonStr = JSON.stringify(headers);
+                const b64 = btoa(encodeURIComponent(jsonStr).replace(/%([0-9A-F]{2})/g, (m, p1) => String.fromCharCode('0x' + p1)));
+                proxyUrl += `&h=${encodeURIComponent(b64)}`;
+            }
+
+            let videoType = 'auto';
+            const lowerUrl = url.toLowerCase();
+            if (lowerUrl.indexOf('.flv') !== -1) videoType = 'flv';
+            else if (lowerUrl.indexOf('.m3u8') !== -1) videoType = 'm3u8';
+            else if (lowerUrl.indexOf('.mp4') !== -1) videoType = 'mp4';
+
+            this.initArt(proxyUrl, videoType);
+        },
+        initYouTube(videoId) {
+            if (this.art) { this.art.destroy(); this.art = null; }
+            this.isYoutube = true;
+            document.getElementById('youtube-app').innerHTML = `<iframe width="100%" height="100%" src="https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&playsinline=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+        },
+        initArt(url, type) {
+            if (this.art) this.art.destroy();
+            this.isYoutube = false;
+            const _this = this;
+            this.art = new Artplayer({
+                container: '#artplayer-app', 
+                url: url, 
+                type: type || 'auto', 
+                autoplay: true, 
+                isLive: false,
+                setting: false, 
+                playbackRate: true, 
+                aspectRatio: true, 
+                fullscreen: true, 
+                fullscreenWeb: true, 
+                autoOrientation: true, 
+                pip: false, 
+                moreVideoAttr: { 'webkit-playsinline': true, 'playsinline': true },
+                customType: {
+                    m3u8: function (video, url) {
+                        if (Hls.isSupported()) {
+                            var hls = new Hls({
+                                pLoader: function(config) {
+                                    let loader = new Hls.DefaultConfig.loader(config);
+                                    this.abort = () => loader.abort();
+                                    this.destroy = () => loader.destroy();
+                                    this.load = (context, config, callbacks) => {
+                                        let onSuccess = callbacks.onSuccess;
+                                        callbacks.onSuccess = (response, stats, context) => {
+                                            if (response.data && typeof response.data === 'string') {
+                                                response.data = response.data.replace(/127\.0\.0\.1/g, window.location.hostname);
+                                            }
+                                            onSuccess(response, stats, context);
+                                        };
+                                        loader.load(context, config, callbacks);
+                                    };
+                                }
+                            }); 
+                            hls.loadSource(url); hls.attachMedia(video);
+                            _this.art.on('destroy', () => hls.destroy());
+                        } else { video.src = url; }
+                    },
+                    flv: function (video, url) {
+                        if (flvjs.isSupported()) {
+                            const flvPlayer = flvjs.createPlayer({ type: 'flv', url: url });
+                            flvPlayer.attachMediaElement(video); flvPlayer.load();
+                            _this.art.on('destroy', () => flvPlayer.destroy());
+                        }
+                    }
+                },
+                controls: [{
+                    position: 'right',
+                    html: '<div style="font-size:12px;background:var(--primary);color:#fff;padding:4px 8px;border-radius:12px;margin-left:5px;">小窗</div>',
+                    tooltip: '系统级画中画',
+                    click: function () {
+                        if (window.AppBridge && window.AppBridge.enterPiP) {
+                            window.AppBridge.enterPiP();
+                        } else if (_this.art) {
+                            _this.art.pip = !_this.art.pip;
+                        }
+                    }
+                }]
+            });
+            
+            this.art.on('error', () => { if (this.art) this.art.notice.show = '播放出错，请尝试切换线路'; });
+
+            this.art.on('video:ended', () => {
+                const nextEpIndex = _this.currentEp + 1; 
+                
+                if (_this.currentLineEps && nextEpIndex < _this.currentLineEps.length) {
+                    const nextEp = _this.currentLineEps[nextEpIndex];
+                    
+                    _this.art.notice.show = `即将播放下一集：${nextEp.name}`;
+                    
+                    setTimeout(() => {
+                        _this.playVideo(nextEp.url, nextEpIndex);
+                    }, 1500);
+                } else {
+                    _this.art.notice.show = '全部剧集已播放完毕';
+                }
+            });
+
+            this.art.on('ready', () => {
+                if ('mediaSession' in navigator) {
+                    navigator.mediaSession.metadata = new MediaMetadata({
+                        title: _this.detailData.vod_name || '未知影片',
+                        artist: _this.detailData.vod_remarks || '本机极速版',
+                        artwork: [{ src: _this.detailData.vod_pic || '', sizes: '512x512', type: 'image/jpeg' }]
+                    });
+                    navigator.mediaSession.setActionHandler('play', () => { if(_this.art) _this.art.play(); });
+                    navigator.mediaSession.setActionHandler('pause', () => { if(_this.art) _this.art.pause(); });
+                }
+            });
+        },
+        goBack() {
+            if (this.art) { 
+                this.art.destroy(); 
+                this.art = null; 
+            }
+            const ytApp = document.getElementById('youtube-app');
+            if (ytApp) ytApp.innerHTML = '';
+            
+            this.currentView = 'list'; 
+            this.isFloating = false;
+        }
+    }
+}).mount('#app');
+</script>
+</body>
+</html>
